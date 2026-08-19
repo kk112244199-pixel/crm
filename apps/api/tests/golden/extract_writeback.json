@@ -1,0 +1,405 @@
+{
+  "version": "0.2",
+  "status": "frozen",
+  "note": "P6 golden v0.2：原文事实与 MEDDIC 推断分离。顶层 champion / economic_buyer / decision_maker 仅在已确认时填写，候选只放 stakeholders + *_status。相对日期以 meeting_date 为锚点。",
+  "amount_convention": "CRM 业务金额默认 CNY 万元；normalized_value 为元。",
+  "items": [
+    {
+      "id": "g01",
+      "meeting_date": "2026-08-01",
+      "sample_intent": "典型推进会 + 可确认 Champion",
+      "question": "亿联智造这次会议的预算、竞对和下一步 POC 承诺是什么？",
+      "canonical_text": "【会议纪要】2026-08-01 与亿联智造 产品演示会\n参会人：王总（亿联智造 VP 工程）、李明（我方 AE）\n\n王总确认 MES 系统采购预算 380 万，Q3 决策。\n王总提到现有 SAP 接口改造成本高，是主要顾虑。\n竞争对手：用友 U9 在内部也做了演示。\n下一步：王总要求两周内提供 POC 方案，李明承诺 8 月 15 日前发出。\n技术负责人张工（VP 工程部下属）支持我方方案，表示愿意在内部推动。\n",
+      "contexts": ["王总确认 MES 系统采购预算 380 万，Q3 决策。竞争对手：用友 U9 在内部也做了演示。李明承诺 8 月 15 日前发出 POC 方案。技术负责人张工支持我方方案，表示愿意在内部推动。SAP 接口改造成本高。"],
+      "ground_truth": {
+        "answer": "预算 380 万，Q3 决策；竞对用友 U9 已在内部演示；主要顾虑是 SAP 接口改造成本高；李明承诺 8 月 15 日前发出 POC。张工支持方案并表示愿意在内部推动。",
+        "competitor": "用友 U9",
+        "competitor_type": "vendor",
+        "competitors": [{"name": "用友 U9", "type": "vendor", "evidence": "在内部也做了演示"}],
+        "amount": {"value": 380, "currency": "CNY", "unit": "万元", "normalized_value": 3800000, "kind": "confirmed_budget", "evidence": "王总确认 MES 系统采购预算 380 万"},
+        "decision_timing": "Q3",
+        "decision_timing_norm": {"date_text": "Q3", "date_range": ["2026-07-01", "2026-09-30"], "normalized_date": null},
+        "next_action": "8 月 15 日前发出 POC 方案",
+        "next_action_norm": {"date_text": "8 月 15 日前", "normalized_date": "2026-08-15"},
+        "champion": "张工",
+        "economic_buyer": null,
+        "economic_buyer_status": "candidate",
+        "decision_maker": null,
+        "decision_authority": null,
+        "financial_approver": null,
+        "technical_buyer": "张工",
+        "procurement": null,
+        "pain_points": "SAP 接口改造成本高",
+        "risk_flags": ["竞对已演示", "SAP接口改造成本"],
+        "meddic_gaps": ["economic_buyer_unconfirmed"],
+        "confidence": {"champion": "high", "economic_buyer": "medium", "budget": "high", "competitor": "high"},
+        "stakeholders": [
+          {"name": "张工", "role": "技术负责人", "sales_role": "champion", "evidence": "支持我方方案，表示愿意在内部推动", "confidence": "high"},
+          {"name": "王总", "role": "VP 工程", "sales_role": "economic_buyer_candidate", "evidence": "确认采购预算 380 万及 Q3 决策；未写明其拥有最终放款权", "confidence": "medium"}
+        ],
+        "evidence": [
+          "王总确认 MES 系统采购预算 380 万，Q3 决策",
+          "竞争对手：用友 U9 在内部也做了演示",
+          "张工……表示愿意在内部推动"
+        ]
+      }
+    },
+    {
+      "id": "g02",
+      "meeting_date": "2026-07-28",
+      "sample_intent": "预算砍削 + 采购价格条件，Champion 未确认",
+      "question": "华峰精密的预算风险、价格底线和竞对是什么？",
+      "canonical_text": "【拜访纪要】2026-07-28 华峰精密 跟进\n参会：陈总（CEO）、赵晓（采购总监）、李明（AE）\n\n陈总透露年度预算缩减 30%，MES 项目暂时搁置到 Q4。\n赵晓表示如果价格能降到 250 万以内可以继续。\n竞对：西门子低代码方案也在评估中，陈总认为西门子更稳定。\n风险：项目可能延期超过 90 天，推进受阻。\n下一步：李明需要提供阶段性交付方案，以降低客户一次性投入。\n",
+      "contexts": ["年度预算缩减 30%，MES 项目暂时搁置到 Q4。价格降到 250 万以内可以继续。竞对西门子低代码。项目可能延期超过 90 天。"],
+      "ground_truth": {
+        "answer": "年度预算缩减 30%，MES 项目搁置到 Q4；采购提出价格需降到 250 万以内才能继续；竞对西门子低代码在评估；存在延期超过 90 天的风险。下一步提供阶段性交付方案。",
+        "competitor": "西门子",
+        "competitor_type": "vendor",
+        "competitors": [{"name": "西门子", "type": "vendor", "evidence": "低代码方案也在评估中，陈总认为更稳定"}],
+        "amount": {"value": 250, "currency": "CNY", "unit": "万元", "normalized_value": 2500000, "kind": "price_ceiling", "evidence": "赵晓表示如果价格能降到 250 万以内可以继续"},
+        "decision_timing": "Q4",
+        "decision_timing_norm": {"date_text": "Q4", "date_range": ["2026-10-01", "2026-12-31"], "normalized_date": null},
+        "next_action": "提供阶段性交付方案",
+        "next_action_norm": {"date_text": "未给具体日", "normalized_date": null},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "candidate",
+        "decision_maker": null,
+        "decision_authority": null,
+        "financial_approver": null,
+        "technical_buyer": null,
+        "procurement": "赵晓",
+        "pain_points": "预算缩减 30%",
+        "risk_flags": ["预算缩减", "延期超过90天", "西门子竞争"],
+        "meddic_gaps": ["champion_unconfirmed", "economic_buyer_unconfirmed"],
+        "confidence": {"champion": "none", "economic_buyer": "medium", "budget": "medium", "competitor": "high"},
+        "stakeholders": [
+          {"name": "赵晓", "role": "采购总监", "sales_role": "procurement", "evidence": "提出价格降到 250 万以内可以继续", "confidence": "medium"},
+          {"name": "陈总", "role": "CEO", "sales_role": "economic_buyer_candidate", "evidence": "透露年度预算缩减 30%，项目搁置到 Q4", "confidence": "medium"}
+        ],
+        "evidence": [
+          "陈总透露年度预算缩减 30%，MES 项目暂时搁置到 Q4",
+          "赵晓表示如果价格能降到 250 万以内可以继续",
+          "西门子低代码方案也在评估中"
+        ]
+      }
+    },
+    {
+      "id": "g03",
+      "meeting_date": "2026-08-05",
+      "sample_intent": "决策链摸底：拍板人 / 财务否决 / 非 Champion 联系人",
+      "question": "锐捷自动化的决策链和经济买家是谁？有哪些内部争议？",
+      "canonical_text": "【电话纪要】2026-08-05 锐捷自动化 采购决策链摸底\n参会：刘强（信息化总监）、李明（AE）\n\n刘强明确：最终拍板人是 CEO 许总，但他本人是技术评估负责人。\n财务总监王芳对预算有一票否决权，尚未接触。\n刘强透露内部有 \"自建 vs 外购\" 争议，自研团队反对采购。\n建议：安排一次 CEO 级别会议，消除 \"自建\" 顾虑。\n下一步：李明安排拜访 CEO 许总，周期 2 周内。\n",
+      "contexts": ["最终拍板人是 CEO 许总。财务总监王芳对预算有一票否决权。内部有自建 vs 外购争议。下一步拜访许总，2 周内。"],
+      "ground_truth": {
+        "answer": "最终拍板人是 CEO 许总；财务总监王芳对预算有一票否决权，尚未接触；内部争议是自建 vs 外购。下一步 2 周内安排拜访许总。",
+        "competitor": "自建",
+        "competitor_type": "build",
+        "competitors": [{"name": "自建/自研", "type": "build", "evidence": "内部有自建 vs 外购争议，自研团队反对采购"}],
+        "amount": null,
+        "decision_timing": "2 周内",
+        "decision_timing_norm": {"date_text": "2 周内（相对 2026-08-05）", "date_range": ["2026-08-05", "2026-08-19"], "normalized_date": null},
+        "next_action": "安排拜访 CEO 许总",
+        "next_action_norm": {"date_text": "2 周内", "date_range": ["2026-08-05", "2026-08-19"], "normalized_date": null},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "unconfirmed",
+        "decision_maker": "许总",
+        "decision_authority": "许总",
+        "financial_approver": "王芳",
+        "technical_buyer": "刘强",
+        "procurement": null,
+        "pain_points": "自建 vs 外购争议",
+        "risk_flags": ["财务未接触", "自研团队反对采购"],
+        "meddic_gaps": ["champion_unconfirmed", "economic_buyer_unconfirmed", "budget_unknown"],
+        "confidence": {"champion": "none", "economic_buyer": "none", "decision_maker": "high", "financial_approver": "high"},
+        "stakeholders": [
+          {"name": "刘强", "role": "信息化总监", "sales_role": "technical_buyer", "evidence": "本人是技术评估负责人，介绍决策链", "confidence": "high"},
+          {"name": "许总", "role": "CEO", "sales_role": "decision_maker", "evidence": "刘强明确最终拍板人是 CEO 许总", "confidence": "high"},
+          {"name": "王芳", "role": "财务总监", "sales_role": "financial_approver", "evidence": "对预算有一票否决权，尚未接触", "confidence": "high"}
+        ],
+        "evidence": [
+          "最终拍板人是 CEO 许总",
+          "财务总监王芳对预算有一票否决权，尚未接触",
+          "内部有自建 vs 外购争议"
+        ]
+      }
+    },
+    {
+      "id": "g04",
+      "meeting_date": "2026-07-30",
+      "sample_intent": "MEDDIC 缺口识别黄金样本",
+      "question": "中科天工这次方案讲解会的 MEDDIC 缺口有哪些？",
+      "canonical_text": "【方案讲解会】2026-07-30 中科天工\n参会：技术团队 5 人\n\n客户痛点：产线数据孤岛，报工效率低，每月人工对账耗时 3 天。\n尚未明确经济买家；技术团队对方案感兴趣但无采购权。\n预算：不清楚，技术负责人郝工说\"由集团统一审批\"。\n下一步：需要推动集团层面采购人员参与下一次会议。\nMEDDIC 缺口：经济买家未确认、预算不明确。\n",
+      "contexts": ["痛点产线数据孤岛，报工效率低。尚未明确经济买家，预算不清楚。MEDDIC 缺口：经济买家未确认、预算不明确。"],
+      "ground_truth": {
+        "answer": "痛点是产线数据孤岛、报工效率低、每月人工对账约 3 天。经济买家未确认、预算不明确；技术团队对方案感兴趣但无采购权。下一步推动集团采购人员参加下次会议。",
+        "competitor": null,
+        "competitor_type": "none",
+        "competitors": [],
+        "amount": null,
+        "decision_timing": null,
+        "decision_timing_norm": {"date_text": null, "normalized_date": null},
+        "next_action": "推动集团层面采购人员参与下一次会议",
+        "next_action_norm": {"date_text": "下一次会议", "normalized_date": null},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "unconfirmed",
+        "decision_maker": null,
+        "decision_authority": "集团统一审批（未具名）",
+        "financial_approver": null,
+        "technical_buyer": "郝工",
+        "procurement": null,
+        "pain_points": "产线数据孤岛，报工效率低",
+        "risk_flags": ["经济买家未确认", "预算不明确"],
+        "meddic_gaps": ["economic_buyer_unconfirmed", "budget_unknown", "champion_unconfirmed"],
+        "confidence": {"champion": "none", "economic_buyer": "none", "budget": "none"},
+        "stakeholders": [
+          {"name": "郝工", "role": "技术负责人", "sales_role": "technical_buyer", "evidence": "郝工称预算由集团统一审批。原文写的是技术团队感兴趣但无采购权，未写郝工个人 Champion 行为", "confidence": "medium"}
+        ],
+        "evidence": [
+          "尚未明确经济买家",
+          "技术团队对方案感兴趣但无采购权",
+          "预算不清楚……由集团统一审批"
+        ]
+      }
+    },
+    {
+      "id": "g05",
+      "meeting_date": "2026-08-03",
+      "sample_intent": "多供应商竞标 + 董事会 ROI 要求，勿把董事会写成 EB",
+      "question": "博远科技竞标里我方相对鼎捷的优劣势和下一步是什么？",
+      "canonical_text": "【竞标推进会】2026-08-03 博远科技\n参会：杨总（CTO）、李明（AE）\n\n博远已收到 4 家供应商报价，我方最贵。\n杨总明确：功能覆盖 > 价格，但董事会要求年内 ROI 正向。\n我方优势：实施周期最短（3 个月），售后 7×24。\n竞对：鼎捷 ERP 模块化方案最低价，但实施周期 9 个月。\n下一步：准备 ROI 测算报告，李明承诺本周五发出。\n",
+      "contexts": ["4 家供应商报价，我方最贵。优势实施周期 3 个月。竞对鼎捷最低价但周期 9 个月。下一步本周五发出 ROI 测算报告。"],
+      "ground_truth": {
+        "answer": "含我方共四家报价且我方最贵；鼎捷价格最低但实施约 9 个月，我方实施约 3 个月。董事会要求年内 ROI 正向。下一步本周五发出 ROI 测算报告。",
+        "competitor": "鼎捷",
+        "competitor_type": "vendor",
+        "competitors": [{"name": "鼎捷", "type": "vendor", "evidence": "ERP 模块化方案最低价，实施周期 9 个月"}],
+        "amount": null,
+        "decision_timing": "年内",
+        "decision_timing_norm": {"date_text": "年内 ROI 正向（相对纪要日之后至年末）", "date_range": ["2026-08-03", "2026-12-31"], "normalized_date": null},
+        "next_action": "本周五发出 ROI 测算报告",
+        "next_action_norm": {"date_text": "本周五（相对 2026-08-03）", "normalized_date": "2026-08-07"},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "unconfirmed",
+        "decision_maker": null,
+        "decision_authority": "董事会",
+        "financial_approver": null,
+        "technical_buyer": "杨总",
+        "procurement": null,
+        "pain_points": null,
+        "risk_flags": ["我方最贵", "含我方共四家报价"],
+        "meddic_gaps": ["champion_unconfirmed", "economic_buyer_unconfirmed"],
+        "confidence": {"champion": "none", "economic_buyer": "none", "competitor": "high", "decision_authority": "medium"},
+        "stakeholders": [
+          {"name": "杨总", "role": "CTO", "sales_role": "technical_buyer", "evidence": "明确功能覆盖优先于价格，并转述董事会 ROI 要求", "confidence": "medium"}
+        ],
+        "evidence": [
+          "已收到 4 家供应商报价，我方最贵",
+          "董事会要求年内 ROI 正向",
+          "竞对：鼎捷 ERP 模块化方案最低价"
+        ]
+      }
+    },
+    {
+      "id": "g06",
+      "meeting_date": "2026-08-10",
+      "sample_intent": "POC 赢面 + 拍板人≠Champion",
+      "question": "飞越智能 POC 结论、金额和签约节奏是什么？",
+      "canonical_text": "【POC 总结会】2026-08-10 飞越智能\n参会：赵总（CEO）、技术团队\n\nPOC 结果：系统稳定，产线效率提升模拟达 18%，超出客户预期。\n赵总当场拍板进入合同谈判阶段，要求本月内签约。\n采购金额：480 万，年维护费 48 万。\n合同责任：采购部孙经理跟进，法务审核预计 1 周。\n下一步：李明本周发送合同草稿，安排法务对接。\n",
+      "contexts": ["POC 产线效率提升 18%。赵总拍板本月内签约。采购金额 480 万，年维护费 48 万。下一步本周发送合同草稿。"],
+      "ground_truth": {
+        "answer": "POC 模拟产线效率提升 18%；采购金额 480 万、年维护 48 万。赵总拍板进入合同谈判，要求本月内签约。下一步本周发送合同草稿，采购孙经理跟进、法务约 1 周审核。",
+        "competitor": null,
+        "competitor_type": "none",
+        "competitors": [],
+        "amount": {"value": 480, "currency": "CNY", "unit": "万元", "normalized_value": 4800000, "kind": "negotiated_amount", "maintenance_value": 48, "maintenance_normalized_value": 480000, "evidence": "采购金额：480 万，年维护费 48 万"},
+        "decision_timing": "本月内签约",
+        "decision_timing_norm": {"date_text": "本月内（相对 2026-08-10）", "date_range": ["2026-08-10", "2026-08-31"], "normalized_date": null},
+        "next_action": "本周发送合同草稿",
+        "next_action_norm": {"date_text": "本周（相对 2026-08-10）", "date_range": ["2026-08-10", "2026-08-16"], "normalized_date": null},
+        "champion": null,
+        "economic_buyer": "赵总",
+        "economic_buyer_status": "confirmed",
+        "decision_maker": "赵总",
+        "decision_authority": "赵总",
+        "financial_approver": null,
+        "technical_buyer": null,
+        "procurement": "孙经理",
+        "pain_points": null,
+        "risk_flags": [],
+        "meddic_gaps": ["champion_unconfirmed"],
+        "confidence": {"champion": "none", "economic_buyer": "high", "budget": "high"},
+        "stakeholders": [
+          {"name": "赵总", "role": "CEO", "sales_role": "economic_buyer", "evidence": "当场拍板进入合同谈判，要求本月内签约", "confidence": "high"},
+          {"name": "孙经理", "role": "采购", "sales_role": "procurement", "evidence": "合同责任：采购部孙经理跟进", "confidence": "medium"}
+        ],
+        "evidence": [
+          "产线效率提升模拟达 18%",
+          "赵总当场拍板进入合同谈判阶段，要求本月内签约",
+          "采购金额：480 万，年维护费 48 万"
+        ]
+      }
+    },
+    {
+      "id": "g07",
+      "meeting_date": "2026-08-12",
+      "sample_intent": "续费增购 + 未具名厂商风险",
+      "question": "鑫科制造续费和新模块预算、竞对风险是什么？",
+      "canonical_text": "【年度回顾会】2026-08-12 鑫科制造\n参会：IT 总监陈伟、采购主管张梅、李明（AE）\n\n续费情况：MES 模块使用 2 年，客户满意度良好。\n新需求：陈伟提出增加 AI 质检模块，预算 150 万。\n张梅提出希望打包续费 + 新模块，给予整体折扣。\n竞对风险：陈伟提到有其他厂商主动接触。\n下一步：制定续费 + 增购方案，7 天内发送。\n",
+      "contexts": ["MES 续费满意度良好。AI 质检模块预算 150 万。希望打包续费加新模块折扣。其他厂商主动接触。7 天内发送增购方案。"],
+      "ground_truth": {
+        "answer": "MES 续费使用两年、满意度良好；新需求 AI 质检模块预算 150 万；采购希望续费与新模块打包折扣。有其他厂商主动接触但未具名。下一步 7 天内发送续费增购方案。",
+        "competitor": null,
+        "competitor_type": "unspecified",
+        "competitors": [{"name": null, "type": "unspecified", "evidence": "有其他厂商主动接触"}],
+        "amount": {"value": 150, "currency": "CNY", "unit": "万元", "normalized_value": 1500000, "kind": "module_budget", "evidence": "陈伟提出增加 AI 质检模块，预算 150 万"},
+        "decision_timing": "7 天内",
+        "decision_timing_norm": {"date_text": "7 天内（相对 2026-08-12）", "date_range": ["2026-08-12", "2026-08-19"], "normalized_date": null},
+        "next_action": "制定续费 + 增购方案，7 天内发送",
+        "next_action_norm": {"date_text": "7 天内", "date_range": ["2026-08-12", "2026-08-19"], "normalized_date": null},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "unconfirmed",
+        "decision_maker": null,
+        "decision_authority": null,
+        "financial_approver": null,
+        "technical_buyer": "陈伟",
+        "procurement": "张梅",
+        "pain_points": null,
+        "risk_flags": ["其他厂商主动接触"],
+        "meddic_gaps": ["champion_unconfirmed", "economic_buyer_unconfirmed", "competitor_unnamed"],
+        "confidence": {"champion": "none", "economic_buyer": "none", "competitor": "low"},
+        "stakeholders": [
+          {"name": "陈伟", "role": "IT 总监", "sales_role": "technical_buyer", "evidence": "提出增加 AI 质检模块，预算 150 万；提到其他厂商接触", "confidence": "medium"},
+          {"name": "张梅", "role": "采购主管", "sales_role": "procurement", "evidence": "希望打包续费 + 新模块，给予整体折扣", "confidence": "medium"}
+        ],
+        "evidence": [
+          "陈伟提出增加 AI 质检模块，预算 150 万",
+          "张梅提出希望打包续费 + 新模块",
+          "有其他厂商主动接触"
+        ]
+      }
+    },
+    {
+      "id": "g08",
+      "meeting_date": "2026-08-14",
+      "sample_intent": "决策卡点 / 审批延迟，联系人≠Champion",
+      "question": "恒安工控电话跟进后项目卡在哪里、下一步何时再约？",
+      "canonical_text": "【电话跟进】2026-08-14 恒安工控\n与王总简短通话，确认项目仍在推进，但董事会审批延迟到 9 月。\n下一步：9 月初再约正式会。\n",
+      "contexts": ["项目仍在推进，董事会审批延迟到 9 月。下一步 9 月初再约正式会。"],
+      "ground_truth": {
+        "answer": "项目仍在推进，卡点是董事会审批延迟到 9 月。下一步 9 月初再约正式会。",
+        "competitor": null,
+        "competitor_type": "none",
+        "competitors": [],
+        "amount": null,
+        "decision_timing": "9 月",
+        "decision_timing_norm": {"date_text": "9 月初", "date_range": ["2026-09-01", "2026-09-10"], "normalized_date": null},
+        "next_action": "9 月初再约正式会",
+        "next_action_norm": {"date_text": "9 月初", "date_range": ["2026-09-01", "2026-09-10"], "normalized_date": null},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "unconfirmed",
+        "decision_maker": null,
+        "decision_authority": "董事会",
+        "financial_approver": null,
+        "technical_buyer": null,
+        "procurement": null,
+        "pain_points": null,
+        "risk_flags": ["审批延迟到9月"],
+        "meddic_gaps": ["champion_unconfirmed", "economic_buyer_unconfirmed"],
+        "confidence": {"champion": "none", "economic_buyer": "none", "decision_authority": "medium"},
+        "stakeholders": [
+          {"name": "王总", "role": "未标明职务的联系人", "sales_role": "contact", "evidence": "简短通话确认项目仍在推进、董事会审批延迟", "confidence": "low"}
+        ],
+        "evidence": [
+          "项目仍在推进，但董事会审批延迟到 9 月",
+          "下一步：9 月初再约正式会"
+        ]
+      }
+    },
+    {
+      "id": "g09",
+      "meeting_date": "2026-08-06",
+      "sample_intent": "Build vs Buy + 财务审批人，勿把自建当厂商竞品",
+      "question": "联创数科新出现的财务决策人和 TCO 要求是什么？",
+      "canonical_text": "【现场拜访】2026-08-06 联创数科\n参会：原联系人刘总监、新联系人 CFO 黄总、李明\n\n黄总首次参会，表示财务对项目有审批权。\n黄总关注：3 年 TCO 是否低于自建方案。\n刘总监建议：先做一份自建 vs 外购 TCO 对比报告。\n下一步：李明本周内完成 TCO 报告发送。\n",
+      "contexts": ["CFO 黄总财务有审批权，关注 3 年 TCO 是否低于自建。下一步本周内完成 TCO 对比报告。"],
+      "ground_truth": {
+        "answer": "CFO 黄总表示财务对项目有审批权，关注 3 年 TCO 是否低于自建。刘总监建议先做自建 vs 外购对比。下一步本周内发送 TCO 报告。",
+        "competitor": "自建",
+        "competitor_type": "build",
+        "competitors": [{"name": "自建方案", "type": "build", "evidence": "3 年 TCO 是否低于自建方案；自建 vs 外购 TCO 对比"}],
+        "amount": null,
+        "decision_timing": "本周内",
+        "decision_timing_norm": {"date_text": "本周内（相对 2026-08-06）", "date_range": ["2026-08-06", "2026-08-09"], "normalized_date": null},
+        "next_action": "本周内完成 TCO 报告发送",
+        "next_action_norm": {"date_text": "本周内（相对 2026-08-06）", "date_range": ["2026-08-06", "2026-08-09"], "normalized_date": null},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "unconfirmed",
+        "decision_maker": null,
+        "decision_authority": null,
+        "financial_approver": "黄总",
+        "technical_buyer": null,
+        "procurement": null,
+        "pain_points": "3 年 TCO 是否低于自建",
+        "risk_flags": ["财务新决策人介入", "Build vs Buy"],
+        "meddic_gaps": ["champion_unconfirmed", "economic_buyer_unconfirmed"],
+        "confidence": {"champion": "none", "economic_buyer": "none", "financial_approver": "high"},
+        "stakeholders": [
+          {"name": "黄总", "role": "CFO", "sales_role": "financial_approver", "evidence": "表示财务对项目有审批权；关注 3 年 TCO 是否低于自建", "confidence": "high"},
+          {"name": "刘总监", "role": "原联系人（职务未写明）", "sales_role": "contact", "evidence": "建议先做自建 vs 外购 TCO 对比报告；无内部推动/引荐的明确行为", "confidence": "medium"}
+        ],
+        "evidence": [
+          "黄总……财务对项目有审批权",
+          "关注：3 年 TCO 是否低于自建方案",
+          "刘总监建议：先做一份自建 vs 外购 TCO 对比报告"
+        ]
+      }
+    },
+    {
+      "id": "g10",
+      "meeting_date": "2026-08-09",
+      "sample_intent": "合同谈判：采购/法务利益相关方，EB/Champion 为空",
+      "question": "宏正精机合同付款方式和签约时间表是什么？",
+      "canonical_text": "【谈判会议】2026-08-09 宏正精机\n参会：采购总监钱峰、法务李律师、李明（AE）\n\n合同条款基本达成一致，付款方式：首付 40%，验收付 40%，质保期付 20%。\n钱峰要求调整违约条款，我方法务确认可接受。\n预计下周签约。\n下一步：李明确认合同修订版本，本周三前发送最终版。\n",
+      "contexts": ["付款首付 40%，验收 40%，质保 20%。预计下周签约。下一步本周三前发送合同最终版。"],
+      "ground_truth": {
+        "answer": "合同条款基本达成一致，付款为首付 40%、验收 40%、质保 20%。钱峰要求调整违约条款，我方已接受。预计下周签约。下一步本周三前发送合同最终版。",
+        "competitor": null,
+        "competitor_type": "none",
+        "competitors": [],
+        "amount": null,
+        "decision_timing": "下周签约",
+        "decision_timing_norm": {"date_text": "下周签约（相对 2026-08-09）", "date_range": ["2026-08-10", "2026-08-16"], "normalized_date": null},
+        "next_action": "本周三前发送合同最终版",
+        "next_action_norm": {"date_text": "本周三前（相对周日纪要，取 2026-08-12）", "normalized_date": "2026-08-12"},
+        "champion": null,
+        "economic_buyer": null,
+        "economic_buyer_status": "unconfirmed",
+        "decision_maker": null,
+        "decision_authority": null,
+        "financial_approver": null,
+        "technical_buyer": null,
+        "procurement": "钱峰",
+        "pain_points": null,
+        "risk_flags": [],
+        "meddic_gaps": ["champion_unconfirmed", "economic_buyer_unconfirmed"],
+        "confidence": {"champion": "none", "economic_buyer": "none"},
+        "stakeholders": [
+          {"name": "钱峰", "role": "采购总监", "sales_role": "procurement", "evidence": "要求调整违约条款；参与合同条款对齐", "confidence": "high"},
+          {"name": "李律师", "role": "客户法务", "sales_role": "legal", "evidence": "参会。原文「我方法务确认可接受」指供应商法务，不能记到李律师名下", "confidence": "medium"}
+        ],
+        "evidence": [
+          "付款方式：首付 40%，验收付 40%，质保期付 20%",
+          "钱峰要求调整违约条款",
+          "预计下周签约"
+        ]
+      }
+    }
+  ]
+}

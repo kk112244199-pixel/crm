@@ -1,0 +1,1320 @@
+openapi: 3.0.3
+info:
+  title: MontoCRM API
+  version: 2.0.0
+  description: |
+    AI 原生 B2B 大客户 CRM — Phase 2（P5–P9）契约。
+
+    实现对照：
+    - P5 Guard hybrid + `/admin/llm/guard/test`；拦截审计 `guard.block`
+    - P6 Langfuse Mock + `/metrics` + Ragas eval
+    - P7 混合检索 + `/admin/rag/test-retrieval` / reindex
+    - P8 钉钉自定义机器人 + `/admin/notify/dingtalk`
+    - P9 CI、Nginx TLS/限流、安全头；`/auth/token` 与 `/activities/extract` 可返回 429
+
+    运行时 FastAPI `version` 为 2.0.0。登录实现为 OAuth2 password（`/auth/token`，`/auth/login` 为别名）。
+  contact:
+    name: MontoCRM
+
+servers:
+  - url: http://localhost:8000
+    description: Local API（无 /api 前缀；经 Nginx 时为 https://host/api/）
+  - url: https://localhost/api
+    description: Compose Nginx TLS
+
+tags:
+  - name: Auth
+  - name: Accounts
+  - name: Contacts
+  - name: Opportunities
+  - name: Activities
+  - name: Writeback
+  - name: Copilot
+  - name: PendingActions
+  - name: Manager
+  - name: Admin LLM
+  - name: Admin RAG
+  - name: Admin Notify
+  - name: Health
+
+paths:
+  /auth/token:
+    post:
+      tags: [Auth]
+      summary: 登录（表单 username=邮箱）
+      operationId: loginToken
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, description: 邮箱 }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: 凭据错误
+        '429':
+          description: 过频（默认生产 5 req/min/IP；Nginx 另有 limit_req）
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 登录别名（与 /auth/token 相同）
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '429':
+          description: 过频
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: 当前用户
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /accounts:
+    get:
+      tags: [Accounts]
+      summary: 客户列表
+      operationId: listAccounts
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountListResponse'
+    post:
+      tags: [Accounts]
+      summary: 创建客户
+      operationId: createAccount
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+  /accounts/{account_id}:
+    get:
+      tags: [Accounts]
+      summary: 客户详情
+      operationId: getAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+  /contacts:
+    get:
+      tags: [Contacts]
+      summary: 联系人列表
+      operationId: listContacts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: account_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactListResponse'
+    post:
+      tags: [Contacts]
+      summary: 创建联系人
+      operationId: createContact
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactCreate'
+      responses:
+        '201':
+          description: Created
+
+  /opportunities:
+    get:
+      tags: [Opportunities]
+      summary: 商机列表
+      operationId: listOpportunities
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: health_status
+          in: query
+          schema:
+            $ref: '#/components/schemas/HealthStatus'
+        - name: stage
+          in: query
+          schema:
+            $ref: '#/components/schemas/OpportunityStage'
+        - $ref: '#/components/parameters/PageParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpportunityListResponse'
+    post:
+      tags: [Opportunities]
+      summary: 创建商机
+      operationId: createOpportunity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpportunityCreate'
+      responses:
+        '201':
+          description: Created
+
+  /opportunities/{opportunity_id}:
+    get:
+      tags: [Opportunities]
+      summary: 商机详情
+      operationId: getOpportunity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OpportunityId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opportunity'
+    patch:
+      tags: [Opportunities]
+      summary: 更新商机（含阶段推进）
+      operationId: updateOpportunity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OpportunityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpportunityUpdate'
+      responses:
+        '200':
+          description: OK
+
+  /opportunities/{opportunity_id}/health:
+    get:
+      tags: [Opportunities, Health]
+      summary: 商机健康度详情（含扣分原因）
+      operationId: getOpportunityHealth
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OpportunityId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDetail'
+
+  /activities:
+    get:
+      tags: [Activities]
+      summary: 活动列表
+      operationId: listActivities
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: account_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: opportunity_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Activities]
+      summary: 创建活动（手工）
+      operationId: createActivity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityCreate'
+      responses:
+        '201':
+          description: Created
+
+  /activities/extract:
+    post:
+      tags: [Activities, Writeback]
+      summary: 提交会议纪要并触发 Orchestrator 并行分析（闭环 A）
+      operationId: extractFromNotes
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractRequest'
+      responses:
+        '200':
+          description: 已生成写回建议，等待确认
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WritebackProposal'
+        '429':
+          description: 抽取过频（生产 10 req/min/用户；Nginx 另有 limit_req）
+
+  /writeback/{proposal_id}/confirm:
+    post:
+      tags: [Writeback]
+      summary: 确认写回（HITL L1）
+      operationId: confirmWriteback
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: proposal_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WritebackConfirmRequest'
+      responses:
+        '200':
+          description: 写回成功
+
+  /writeback/{proposal_id}/reject:
+    post:
+      tags: [Writeback]
+      summary: 拒绝写回
+      operationId: rejectWriteback
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: proposal_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 已保存原始 Activity
+
+  /copilot/query:
+    post:
+      tags: [Copilot]
+      summary: 自然语言查询（闭环 C）
+      operationId: copilotQuery
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopilotQueryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopilotQueryResponse'
+
+  /copilot/draft:
+    post:
+      tags: [Copilot]
+      summary: 生成邮件/跟进草稿（闭环 C）
+      operationId: copilotDraft
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopilotDraftRequest'
+      responses:
+        '202':
+          description: 草稿已生成，待确认发送
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingAction'
+
+  /pending-actions/{pending_id}:
+    get:
+      tags: [PendingActions]
+      summary: 获取待确认动作
+      operationId: getPendingAction
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PendingId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingAction'
+
+  /pending-actions/{pending_id}/confirm:
+    post:
+      tags: [PendingActions]
+      summary: 确认待处理动作（HITL L1/L2）
+      operationId: confirmPendingAction
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PendingId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PendingConfirmRequest'
+      responses:
+        '200':
+          description: 已执行
+
+  /pending-actions/{pending_id}/reject:
+    post:
+      tags: [PendingActions]
+      summary: 拒绝待处理动作
+      operationId: rejectPendingAction
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PendingId'
+      responses:
+        '200':
+          description: OK
+
+  /manager/risk-board:
+    get:
+      tags: [Manager]
+      summary: 团队风险看板（闭环 B）
+      operationId: getRiskBoard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskBoardResponse'
+
+  /llm/options:
+    get:
+      tags: [Admin LLM]
+      summary: 可选 Provider/Model 列表（无 API Key）
+      operationId: getLlmOptions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LlmOptionsResponse'
+        '403':
+          description: 非 Admin
+
+  /admin/llm/settings:
+    get:
+      tags: [Admin LLM]
+      summary: 获取当前 LLM 配置
+      operationId: getLlmSettings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LlmSettings'
+    put:
+      tags: [Admin LLM]
+      summary: 保存 LLM 配置（热生效）
+      operationId: updateLlmSettings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmSettingsUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LlmSettings'
+
+  /admin/llm/test:
+    post:
+      tags: [Admin LLM]
+      summary: 测试 Provider 连通性
+      operationId: testLlmConnection
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmTestRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LlmTestResponse'
+
+  /admin/llm/guard/test:
+    post:
+      tags: [Admin LLM]
+      summary: Guard 样例扫描（不调用业务 LLM）
+      operationId: testGuardSample
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                direction:
+                  type: string
+                  enum: [input, output]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  blocked: { type: boolean }
+                  score: { type: number }
+                  category: { type: string }
+                  reason: { type: string }
+                  pii_labels:
+                    type: array
+                    items: { type: string }
+                  redacted_text: { type: string }
+                  sensitivity: { type: number }
+                  mode: { type: string }
+        '403':
+          description: 非 Admin
+
+  /admin/rag/test-retrieval:
+    post:
+      tags: [Admin RAG]
+      summary: 测试 RAG 检索（Embedding + Rerank，不调用 Chat LLM）
+      operationId: testRagRetrieval
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RagTestRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RagTestResponse'
+
+  /admin/rag/reindex:
+    post:
+      tags: [Admin RAG]
+      summary: 触发全库 memory_chunks re-index（Embedding 变更后）
+      operationId: triggerReindex
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: Re-index 任务已排队
+
+  /admin/rag/reindex-status:
+    get:
+      tags: [Admin RAG]
+      summary: 查询 re-index 进度
+      operationId: getReindexStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReindexStatus'
+
+  /admin/notify/dingtalk:
+    get:
+      tags: [Admin Notify]
+      summary: 钉钉机器人配置（Webhook 脱敏，不回显 Secret）
+      operationId: getDingtalkNotify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: 非 Admin
+    put:
+      tags: [Admin Notify]
+      summary: 更新钉钉配置
+      operationId: updateDingtalkNotify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: 非 Admin
+
+  /admin/notify/dingtalk/test:
+    post:
+      tags: [Admin Notify]
+      summary: 发送测试消息（需已配置 URL+加签 Secret）
+      operationId: testDingtalkNotify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: 未配置或加签失败
+        '403':
+          description: 非 Admin
+
+  /health:
+    get:
+      tags: [Health]
+      summary: 存活检查
+      operationId: healthCheck
+      responses:
+        '200':
+          description: OK
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: 就绪检查（DB/Redis/LLM）
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: OK
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AccountId:
+      name: account_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OpportunityId:
+      name: opportunity_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PendingId:
+      name: pending_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    PageSizeParam:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        default: 20
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ae, sales_manager, admin]
+
+    HealthStatus:
+      type: string
+      enum: [green, yellow, red]
+
+    OpportunityStage:
+      type: string
+      enum: [qualified, discovery, proposal, negotiation, closed_won, closed_lost]
+
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        industry:
+          type: string
+        size:
+          type: string
+          enum: [smb, mid, enterprise]
+        region:
+          type: string
+
+    AccountCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        industry:
+          type: string
+        size:
+          type: string
+        region:
+          type: string
+
+    AccountListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+        total:
+          type: integer
+
+    ContactCreate:
+      type: object
+      required: [account_id, name]
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        title:
+          type: string
+        role_in_deal:
+          type: string
+        email:
+          type: string
+
+    ContactListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+
+    Opportunity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          type: number
+        stage:
+          $ref: '#/components/schemas/OpportunityStage'
+        health_score:
+          type: integer
+        health_status:
+          $ref: '#/components/schemas/HealthStatus'
+        competitor:
+          type: string
+        pain_points:
+          type: array
+          items:
+            type: string
+
+    OpportunityCreate:
+      type: object
+      required: [account_id, name]
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          type: number
+        stage:
+          $ref: '#/components/schemas/OpportunityStage'
+
+    OpportunityUpdate:
+      type: object
+      properties:
+        stage:
+          $ref: '#/components/schemas/OpportunityStage'
+        amount:
+          type: number
+        competitor:
+          type: string
+        pain_points:
+          type: array
+          items:
+            type: string
+
+    OpportunityListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Opportunity'
+        total:
+          type: integer
+
+    HealthDetail:
+      type: object
+      properties:
+        health_score:
+          type: integer
+        health_status:
+          $ref: '#/components/schemas/HealthStatus'
+        deductions:
+          type: array
+          items:
+            type: object
+            properties:
+              rule_id:
+                type: string
+                example: H001
+              points:
+                type: integer
+              message:
+                type: string
+        risk_summary:
+          type: string
+          description: 风险预警（risk_sentinel）+ 规则引擎生成的风险说明（自然语言）
+
+    ActivityCreate:
+      type: object
+      required: [account_id, type, content]
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        opportunity_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [meeting, call, email, note]
+        subject:
+          type: string
+        content:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+
+    ExtractRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 50
+        account_id:
+          type: string
+          format: uuid
+        opportunity_id:
+          type: string
+          format: uuid
+
+    WritebackProposal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        opportunity_updates:
+          type: object
+        contact_updates:
+          type: array
+          items:
+            type: object
+        new_contacts:
+          type: array
+          items:
+            type: object
+        tasks:
+          type: array
+          items:
+            type: object
+        reasoning:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: object
+
+    WritebackConfirmRequest:
+      type: object
+      properties:
+        accepted_fields:
+          type: object
+          description: 用户勾选/修改后的最终字段
+
+    CopilotQueryRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        account_id:
+          type: string
+          format: uuid
+        opportunity_id:
+          type: string
+          format: uuid
+
+    CopilotQueryResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+        citations:
+          type: array
+          items:
+            type: object
+            properties:
+              activity_id:
+                type: string
+                format: uuid
+              snippet:
+                type: string
+
+    CopilotDraftRequest:
+      type: object
+      required: [instruction]
+      properties:
+        instruction:
+          type: string
+        account_id:
+          type: string
+          format: uuid
+        opportunity_id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+
+    PendingAction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [writeback, send_email, stage_change, amount_change]
+        hitl_level:
+          type: string
+          enum: [L1, L2]
+        status:
+          type: string
+          enum: [pending, confirmed, rejected, expired]
+        payload:
+          type: object
+        expires_at:
+          type: string
+          format: date-time
+
+    PendingConfirmRequest:
+      type: object
+      properties:
+        edited_payload:
+          type: object
+
+    RiskBoardResponse:
+      type: object
+      properties:
+        red_opportunities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Opportunity'
+        yellow_count:
+          type: integer
+        top_stalled:
+          type: array
+          items:
+            type: object
+
+    LlmOptionsResponse:
+      type: object
+      properties:
+        providers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              enabled:
+                type: boolean
+              models:
+                type: array
+                items:
+                  type: string
+
+    LlmSettings:
+      type: object
+      properties:
+        default_provider:
+          type: string
+        default_model:
+          type: string
+        agent_overrides:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              provider:
+                type: string
+              model:
+                type: string
+        embedding_provider:
+          type: string
+        embedding_model:
+          type: string
+        embedding_dimension:
+          type: integer
+          readOnly: true
+        rerank_enabled:
+          type: boolean
+        rerank_provider:
+          type: string
+        rerank_model:
+          type: string
+        rerank_top_k:
+          type: integer
+        rerank_return_n:
+          type: integer
+        guard_enabled:
+          type: boolean
+        guard_mode:
+          type: string
+          enum: [rules, llm-guard, hybrid]
+        guard_config:
+          type: object
+          properties:
+            sensitivity:
+              type: number
+              minimum: 0
+              maximum: 1
+            pii_redact_input:
+              type: boolean
+            pii_redact_output:
+              type: boolean
+            max_input_chars:
+              type: integer
+            max_output_chars:
+              type: integer
+        fallback_provider:
+          type: string
+        fallback_model:
+          type: string
+        reindex_status:
+          type: string
+          enum: [idle, pending, running, completed, failed]
+          readOnly: true
+        effective_config:
+          type: object
+          description: 合并 DB + ENV 后的只读生效配置（Chat + Embedding + Rerank + Guard）
+
+    LlmSettingsUpdate:
+      type: object
+      properties:
+        default_provider:
+          type: string
+        default_model:
+          type: string
+        agent_overrides:
+          type: object
+        embedding_provider:
+          type: string
+        embedding_model:
+          type: string
+        rerank_enabled:
+          type: boolean
+        rerank_provider:
+          type: string
+        rerank_model:
+          type: string
+        rerank_top_k:
+          type: integer
+        rerank_return_n:
+          type: integer
+        guard_enabled:
+          type: boolean
+        guard_mode:
+          type: string
+        guard_config:
+          type: object
+          properties:
+            sensitivity:
+              type: number
+              minimum: 0
+              maximum: 1
+            pii_redact_input:
+              type: boolean
+            pii_redact_output:
+              type: boolean
+            max_input_chars:
+              type: integer
+            max_output_chars:
+              type: integer
+        fallback_provider:
+          type: string
+        fallback_model:
+          type: string
+      additionalProperties: false
+      description: 禁止包含 api_key 字段
+
+    RagTestRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        account_id:
+          type: string
+          format: uuid
+        opportunity_id:
+          type: string
+          format: uuid
+
+    RagTestResponse:
+      type: object
+      properties:
+        chunks:
+          type: array
+          items:
+            type: object
+            properties:
+              chunk_id:
+                type: string
+                format: uuid
+              snippet:
+                type: string
+              score:
+                type: number
+        retrieval_meta:
+          type: object
+          properties:
+            raw_query:
+              type: string
+            rewritten_query:
+              type: string
+            chunk_strategy:
+              type: string
+            embedding_provider:
+              type: string
+            embedding_model:
+              type: string
+            rerank_enabled:
+              type: boolean
+            rerank_provider:
+              type: string
+            rerank_model:
+              type: string
+
+    ReindexStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [idle, pending, running, completed, failed]
+        progress_pct:
+          type: integer
+        message:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    LlmTestRequest:
+      type: object
+      required: [provider, model]
+      properties:
+        provider:
+          type: string
+        model:
+          type: string
+
+    LlmTestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        latency_ms:
+          type: integer
+        message:
+          type: string

@@ -1,0 +1,49 @@
+# Planner 路由规则 — 可热更新，无需重启
+# 见 agent-architecture.md §15.1
+
+version: "1.0"
+
+# 场景：会议纪要写回
+meeting_extract:
+  # 必开（无论纪要内容如何）
+  required_agents:
+    - opportunity_judge
+
+  # 基于纪要长度
+  length_rules:
+    - condition: "len(canonical_text) > 200"
+      activate: [customer_insight]
+    - condition: "len(canonical_text) < 300 and no_contacts"
+      deactivate: [customer_insight]   # 短纪要且无联系人可省 customer_insight
+
+  # 基于关键词
+  keyword_rules:
+    customer_insight:
+      keywords: ["联系人", "决策人", "负责人", "工程师", "总监", "VP", "CTO", "CEO", "经理"]
+      action: force_activate
+
+    risk_sentinel:
+      default: true   # MVP 默认开
+      keywords: ["风险", "担心", "顾虑", "竞争", "竞对", "价格高", "预算不足", "没有预算",
+                 "延期", "搁置", "暂停", "失去", "流失", "不满意"]
+      action: force_activate
+
+    action_planner:
+      default: true   # P2 默认开
+      keywords: ["下一步", "跟进", "待办", "安排", "计划", "任务", "需要", "确认", "承诺"]
+      action: force_activate
+
+  # Fallback：Planner LLM 失败时全开
+  fallback_agents: [customer_insight, opportunity_judge, risk_sentinel, action_planner]
+
+# 场景：Copilot 查询
+copilot_query:
+  default_agents: [opportunity_judge]
+  complex_query_agents: [customer_insight, opportunity_judge, risk_sentinel]
+  simple_query_agents: [opportunity_judge]
+  fallback_agents: [opportunity_judge]
+
+# 场景：邮件草稿
+copilot_draft:
+  required_agents: [customer_insight, opportunity_judge, action_planner]
+  fallback_agents: [customer_insight, opportunity_judge, action_planner]

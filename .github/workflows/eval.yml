@@ -1,0 +1,24 @@
+name: Weekly eval
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    env:
+      RAGAS_BACKEND: heuristic
+      LLM_DEFAULT_PROVIDER: mock
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: make eval (warnings do not fail)
+        run: python -m app.eval.runner --out tests/ragas_report.json
