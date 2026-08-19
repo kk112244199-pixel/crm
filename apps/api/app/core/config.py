@@ -1,6 +1,6 @@
 from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -99,7 +99,10 @@ class Settings(BaseSettings):
     # ── Langfuse ──────────────────────────────────────────────────────────────
     LANGFUSE_PUBLIC_KEY: str = ""
     LANGFUSE_SECRET_KEY: str = ""
-    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+    LANGFUSE_HOST: str = Field(
+        default="https://cloud.langfuse.com",
+        validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
+    )
     RAGAS_BACKEND: Literal["heuristic", "llm"] = "heuristic"
 
     # ── 钉钉群自定义机器人 ─────────────────────────────────────────────────
@@ -110,6 +113,13 @@ class Settings(BaseSettings):
     DINGTALK_QUIET_END: str = "08:00"
     DINGTALK_TZ: str = "Asia/Shanghai"
     APP_PUBLIC_BASE_URL: str = "http://localhost:3000"
+
+    @field_validator("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", mode="before")
+    @classmethod
+    def _strip_langfuse_keys(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip().strip('"').strip("'")
+        return v
 
     @field_validator("LLM_AVAILABLE_PROVIDERS", mode="before")
     @classmethod

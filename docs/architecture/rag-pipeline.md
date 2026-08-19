@@ -444,7 +444,7 @@ Guard 在改写 **之前**（拦截恶意输入）；改写使用独立 LLM 调�
 | 阶段 | 方法 |
 |---|---|
 | P6+ | `make eval`：启发式 Faithfulness / Relevancy / Context Recall + **检索 MRR@5**（相对 P4 随机向量基线） |
-| 可选 | `RAGAS_BACKEND=llm` 安装 ragas 后走 LLM 评测 |
+| 可选 | `RAGAS_BACKEND=llm`：优先 ragas；导入失败则用 Dashscope JSON 裁判，再不行回退启发式 |
 
 ---
 

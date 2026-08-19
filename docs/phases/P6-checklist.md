@@ -39,7 +39,7 @@
 
 ### Ragas / Golden
 
-- [x] 10 条 golden（`status: frozen`，评测用；一线抽查可再改口径）
+- [x] 10 条 golden（`status: frozen` v0.3；拍板≠EB，仅 g06 确认 EB）
 - [x] Faithfulness / Answer Relevancy / Context Recall
 - [x] `make eval` 可跑
 - [x] 启发式自检：Faithfulness 1.0，Relevancy 0.84（P7 后对照模型输出再刷）

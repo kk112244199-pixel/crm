@@ -17,6 +17,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+_REPO_ENV = Path(__file__).resolve().parents[4] / ".env"
+_API_ENV = Path(__file__).resolve().parents[2] / ".env"
+try:
+    from dotenv import load_dotenv
+    if _REPO_ENV.exists():
+        load_dotenv(_REPO_ENV, override=False)
+    if _API_ENV.exists():
+        load_dotenv(_API_ENV, override=False)
+except Exception:
+    pass
+
 from app.eval.metrics import aggregate, score_item
 
 log = logging.getLogger("montocrm.eval")
@@ -76,37 +87,136 @@ def evaluate_dataset(golden: dict[str, Any], predictions: dict[str, str] | None 
     }
 
 
+def _dashscope_llm():
+    from app.core.config import settings
+    from app.eval.dashscope_ragas import qwen_chat
+
+    key = settings.DASHSCOPE_API_KEY or settings.OPENAI_API_KEY
+    base = settings.DASHSCOPE_BASE_URL if settings.DASHSCOPE_API_KEY else settings.OPENAI_BASE_URL
+    if not key:
+        return None
+    return qwen_chat(api_key=key, base_url=base, model=settings.LLM_DEFAULT_MODEL)
+
+
+def _ragas_embeddings():
+    """优先 BGE sidecar（与检索一致）；不可达时用 Dashscope text-embedding-v3。"""
+    import httpx
+    from app.core.config import settings
+    from app.eval.dashscope_ragas import DashscopeEmbeddings, SidecarEmbeddings
+
+    base = (settings.HF_SIDECAR_URL or "").rstrip("/")
+    if base:
+        try:
+            health = httpx.get(f"{base}/health", timeout=3.0)
+            if health.status_code == 200:
+                return SidecarEmbeddings(
+                    base_url=base,
+                    timeout_sec=float(settings.HF_SIDECAR_TIMEOUT_SEC or 120),
+                )
+        except Exception:
+            pass
+    key = settings.DASHSCOPE_API_KEY or settings.OPENAI_API_KEY
+    url = settings.DASHSCOPE_BASE_URL if settings.DASHSCOPE_API_KEY else settings.OPENAI_BASE_URL
+    if not key:
+        return None
+    return DashscopeEmbeddings(api_key=key, base_url=url, model="text-embedding-v3")
+
+
+def _inject_openai_compat_env() -> None:
+    """ragas / openai SDK 会读 OPENAI_*；空字符串也会挡住 setdefault。"""
+    import os
+    from app.core.config import settings
+
+    key = settings.DASHSCOPE_API_KEY or settings.OPENAI_API_KEY
+    if not key:
+        return
+    os.environ["OPENAI_API_KEY"] = key
+    os.environ["OPENAI_BASE_URL"] = (
+        settings.DASHSCOPE_BASE_URL if settings.DASHSCOPE_API_KEY else settings.OPENAI_BASE_URL
+    )
+
+
 def maybe_llm_ragas(report: dict[str, Any], golden: dict[str, Any]) -> dict[str, Any]:
-    """Optional real ragas; never raises out."""
+    """Optional LLM eval; never raises out. Prefer ragas, else Dashscope JSON judge."""
     try:
         from app.core.config import settings
         if getattr(settings, "RAGAS_BACKEND", "heuristic") != "llm":
             return report
     except Exception:
         return report
+
     try:
-        from ragas import evaluate
-        from ragas.metrics import faithfulness, answer_relevancy, context_recall
+        _inject_openai_compat_env()
         from datasets import Dataset
-    except Exception as e:
-        report["warnings"].append(f"ragas llm backend unavailable, kept heuristic: {e}")
-        return report
-    try:
+        from app.eval.ragas_compat import import_ragas_evaluate
+
+        evaluate, faithfulness, answer_relevancy, context_recall = import_ragas_evaluate()
         records = []
         for item in golden["items"]:
             gt = item["ground_truth"]
             records.append({
-                "question": item["question"],
-                "answer": gt.get("answer", ""),
-                "contexts": item.get("contexts") or [item.get("canonical_text", "")],
-                "ground_truth": gt.get("answer", ""),
+                "user_input": item["question"],
+                "response": gt.get("answer", ""),
+                "retrieved_contexts": item.get("contexts") or [item.get("canonical_text", "")],
+                "reference": gt.get("answer", ""),
             })
         ds = Dataset.from_list(records)
-        result = evaluate(ds, metrics=[faithfulness, answer_relevancy, context_recall])
+        kwargs: dict[str, Any] = {
+            "metrics": [faithfulness, answer_relevancy, context_recall],
+            "raise_exceptions": False,
+            "show_progress": False,
+        }
+        llm = _dashscope_llm()
+        if llm is not None:
+            kwargs["llm"] = llm
+        emb = _ragas_embeddings()
+        if emb is not None:
+            kwargs["embeddings"] = emb
+        result = evaluate(ds, **kwargs)
         report["backend"] = "ragas_llm"
-        report["ragas_raw"] = {k: float(v) for k, v in dict(result).items() if isinstance(v, (int, float))}
+        raw: dict[str, Any] = {}
+        if hasattr(result, "to_pandas"):
+            means = result.to_pandas().mean(numeric_only=True)
+            raw = {str(k): v for k, v in means.items()}
+        else:
+            raw = {k: v for k, v in dict(result).items()}
+        from app.eval.dashscope_ragas import merge_ragas_into_summary
+        merge_ragas_into_summary(report, raw)
+        return report
     except Exception as e:
-        report["warnings"].append(f"ragas evaluate failed: {e}")
+        report["warnings"].append(f"ragas evaluate failed, trying llm_judge: {e}")
+
+    try:
+        from app.core.config import settings
+        from app.eval.llm_judge import judge_golden
+
+        key = settings.DASHSCOPE_API_KEY or settings.OPENAI_API_KEY
+        base = (
+            settings.DASHSCOPE_BASE_URL
+            if settings.DASHSCOPE_API_KEY
+            else settings.OPENAI_BASE_URL
+        )
+        if not key:
+            report["warnings"].append("llm_judge skipped: no DASHSCOPE_API_KEY / OPENAI_API_KEY")
+            return report
+        judged = judge_golden(
+            golden,
+            api_key=key,
+            base_url=base,
+            model=settings.LLM_DEFAULT_MODEL,
+        )
+        report["backend"] = "llm_judge"
+        report["llm_judge"] = judged
+        report["summary"] = judged["summary"]
+        id_scores = {r["id"]: r for r in judged["items"]}
+        for row in report.get("items") or []:
+            extra = id_scores.get(row.get("id"))
+            if extra:
+                row["llm_faithfulness"] = extra["faithfulness"]
+                row["llm_answer_relevancy"] = extra["answer_relevancy"]
+                row["llm_context_recall"] = extra["context_recall"]
+    except Exception as e:
+        report["warnings"].append(f"llm_judge failed, kept heuristic: {e}")
     return report
 
 

@@ -1,7 +1,7 @@
 {
-  "version": "0.2",
+  "version": "0.3",
   "status": "frozen",
-  "note": "P6 golden v0.2：原文事实与 MEDDIC 推断分离。顶层 champion / economic_buyer / decision_maker 仅在已确认时填写，候选只放 stakeholders + *_status。相对日期以 meeting_date 为锚点。",
+  "note": "P6 golden v0.3：拍板人≠经济买家。顶层 economic_buyer 仅在当场拍板花钱/签约时填写。相对日期以 meeting_date 为锚点。",
   "amount_convention": "CRM 业务金额默认 CNY 万元；normalized_value 为元。",
   "items": [
     {
@@ -87,12 +87,12 @@
     {
       "id": "g03",
       "meeting_date": "2026-08-05",
-      "sample_intent": "决策链摸底：拍板人 / 财务否决 / 非 Champion 联系人",
+      "sample_intent": "决策链摸底：拍板人≠经济买家；财务否决单独记",
       "question": "锐捷自动化的决策链和经济买家是谁？有哪些内部争议？",
       "canonical_text": "【电话纪要】2026-08-05 锐捷自动化 采购决策链摸底\n参会：刘强（信息化总监）、李明（AE）\n\n刘强明确：最终拍板人是 CEO 许总，但他本人是技术评估负责人。\n财务总监王芳对预算有一票否决权，尚未接触。\n刘强透露内部有 \"自建 vs 外购\" 争议，自研团队反对采购。\n建议：安排一次 CEO 级别会议，消除 \"自建\" 顾虑。\n下一步：李明安排拜访 CEO 许总，周期 2 周内。\n",
       "contexts": ["最终拍板人是 CEO 许总。财务总监王芳对预算有一票否决权。内部有自建 vs 外购争议。下一步拜访许总，2 周内。"],
       "ground_truth": {
-        "answer": "最终拍板人是 CEO 许总；财务总监王芳对预算有一票否决权，尚未接触；内部争议是自建 vs 外购。下一步 2 周内安排拜访许总。",
+        "answer": "最终拍板人是 CEO 许总（decision_maker，不是已确认经济买家：未写明其控预算/放款）。财务总监王芳对预算有一票否决权，尚未接触。内部争议是自建 vs 外购。下一步 2 周内安排拜访许总。顶层 economic_buyer 为空。",
         "competitor": "自建",
         "competitor_type": "build",
         "competitors": [{"name": "自建/自研", "type": "build", "evidence": "内部有自建 vs 外购争议，自研团队反对采购"}],
@@ -206,12 +206,12 @@
     {
       "id": "g06",
       "meeting_date": "2026-08-10",
-      "sample_intent": "POC 赢面 + 拍板人≠Champion",
+      "sample_intent": "POC 赢面：当场拍板签约=已确认 EB；拍板人≠Champion",
       "question": "飞越智能 POC 结论、金额和签约节奏是什么？",
       "canonical_text": "【POC 总结会】2026-08-10 飞越智能\n参会：赵总（CEO）、技术团队\n\nPOC 结果：系统稳定，产线效率提升模拟达 18%，超出客户预期。\n赵总当场拍板进入合同谈判阶段，要求本月内签约。\n采购金额：480 万，年维护费 48 万。\n合同责任：采购部孙经理跟进，法务审核预计 1 周。\n下一步：李明本周发送合同草稿，安排法务对接。\n",
       "contexts": ["POC 产线效率提升 18%。赵总拍板本月内签约。采购金额 480 万，年维护费 48 万。下一步本周发送合同草稿。"],
       "ground_truth": {
-        "answer": "POC 模拟产线效率提升 18%；采购金额 480 万、年维护 48 万。赵总拍板进入合同谈判，要求本月内签约。下一步本周发送合同草稿，采购孙经理跟进、法务约 1 周审核。",
+        "answer": "POC 模拟产线效率提升 18%；采购金额 480 万、年维护 48 万。赵总当场拍板进入合同谈判并要求本月内签约，记为已确认 economic_buyer（不必再等财务副签）。Champion 仍未确认。下一步本周发送合同草稿，采购孙经理跟进、法务约 1 周审核。",
         "competitor": null,
         "competitor_type": "none",
         "competitors": [],

@@ -10,6 +10,9 @@ from app.core.tracing import (
     get_mock_events,
     record_generation,
 )
+from unittest.mock import patch
+
+from app.core.config import settings
 from app.eval.runner import GOLDEN_DEFAULT, evaluate_dataset, load_golden, run
 
 
@@ -93,7 +96,10 @@ def test_eval_report_has_ragas_metrics_and_does_not_block(tmp_path: Path):
         assert k in report["summary"]
         assert 0.0 <= report["summary"][k] <= 1.0
     out = tmp_path / "ragas_report.json"
-    again = run(GOLDEN_DEFAULT, out, None)
+    with patch.object(settings, "RAGAS_BACKEND", "heuristic"), patch.object(
+        settings, "EMBEDDING_PROVIDER", "local"
+    ):
+        again = run(GOLDEN_DEFAULT, out, None)
     saved = json.loads(out.read_text(encoding="utf-8"))
     assert saved["n_items"] == 10
     assert saved["backend"] == "heuristic"
@@ -101,3 +107,4 @@ def test_eval_report_has_ragas_metrics_and_does_not_block(tmp_path: Path):
     assert again["summary"]["answer_relevancy"] >= 0.70
     assert saved["retrieval"]["mrr_at_5_hybrid"] >= 0.8
     assert saved["retrieval"]["relative_lift"] >= 0.2
+    assert saved["retrieval"]["embedding_backend"] == "hash"

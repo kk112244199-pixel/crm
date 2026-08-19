@@ -1,4 +1,13 @@
-.PHONY: eval test-guard test-rag hf-sidecar test-unit
+.PHONY: eval test-guard test-rag hf-sidecar test-unit up sidecar-autostart
+
+eval:
+	cd apps/api && python -m app.eval.runner --out tests/ragas_report.json
+
+up:
+	powershell -File scripts/dev-up.ps1
+
+sidecar-autostart:
+	powershell -File scripts/install-sidecar-autostart.ps1
 
 eval:
 	cd apps/api && python -m app.eval.runner --out tests/ragas_report.json

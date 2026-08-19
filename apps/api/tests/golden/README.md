@@ -1,6 +1,8 @@
 # Golden dataset（P6）
 
-`extract_writeback.json` v0.2：10 条种子纪要 + 参考答案。
+- `extract_writeback.json` v0.3：10 条种子纪要 + 参考答案。
+- **拍板人 ≠ 经济买家**。顶层 `economic_buyer` 仅在当场拍板花钱/签约时填写（目前仅 g06 赵总）。
+- `canonical_text` 与 P2 `seed_crm_data.py` 的 `GOLDEN_MINUTES` 对齐，不重写场景。
 
 - `canonical_text` 与 P2 `seed_crm_data.py` 的 `GOLDEN_MINUTES` 对齐，不重写场景。
 - **事实字段**可为空；MEDDIC 角色必须有 `evidence` + `confidence`。

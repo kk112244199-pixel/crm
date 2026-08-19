@@ -32,7 +32,8 @@ langchain-core==0.3.26
 # Observability
 structlog==24.4.0
 prometheus_client==0.21.1
-# Optional: pip install langfuse  (empty LANGFUSE_* keys → mock exporter)
+langfuse>=2.53.0,<3
+# Optional: pip install ragas datasets  # RAGAS_BACKEND=llm 时；失败则回退 heuristic
 
 # Testing
 pytest==8.3.4

@@ -23,8 +23,10 @@ git clone <repo_url> && cd CRM
 cp .env.example .env
 # 编辑 .env，填入 DASHSCOPE_API_KEY（可不填，用 mock 模式）
 
-# 2. 启动所有服务（首次约 3-5 分钟拉取镜像）
-docker compose up -d
+# 2. 启动栈（会先检查本机 BGE sidecar 18090，再 compose）
+powershell -File scripts/dev-up.ps1
+# 登录后自动开 sidecar（只需一次）：
+# powershell -File scripts/install-sidecar-autostart.ps1
 
 # 3. 等待 DB 就绪后执行迁移
 docker compose exec api alembic upgrade head
@@ -71,7 +73,9 @@ cd apps/api && python -m app.eval.runner --out tests/ragas_report.json
 
 Langfuse：`.env` 填写 `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` 后走官方 SDK；留空则内存 Mock。不要把 Key 提交进 git；CI 故意不配云账号。
 
-真 Ragas LLM：本机 `RAGAS_BACKEND=llm` 且已安装 ragas + Chat Key。GitHub 周评估默认 heuristic，可在 Actions 里 **Run workflow** 立刻跑一轮，产物为 `ragas_report` artifact。
+真 Ragas / LLM：`RAGAS_BACKEND=llm` 时 `summary` 覆盖 ragas 有效分（启发式在 `heuristic_summary`）。Qwen 关闭 thinking。向量优先本机 sidecar **BGE-M3**（与线上检索相同）；sidecar 不可达才退 Dashscope `text-embedding-v3`。检索 MRR 同样：sidecar 用 BGE，CI 用 hash。GitHub 周评估默认 heuristic + hash。
+
+本机 HTTPS：`https://127.0.0.1:18443/`（自签；Apache 占 443）。公网 Let's Encrypt 需要你自己的域名和 certbot 证书后执行 `CERT_DIR=/etc/letsencrypt/live/<域名> ./scripts/load-le-certs.sh`；当前环境没有公网域名，未签发公网证书。
 
 ### CI / 测试（P9）
 
