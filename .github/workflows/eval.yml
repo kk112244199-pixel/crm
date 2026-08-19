@@ -15,10 +15,14 @@ jobs:
       run:
         working-directory: apps/api
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - name: make eval (warnings do not fail)
         run: python -m app.eval.runner --out tests/ragas_report.json
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ragas_report
+          path: apps/api/tests/ragas_report.json

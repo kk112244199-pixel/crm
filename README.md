@@ -67,9 +67,11 @@ make eval
 cd apps/api && python -m app.eval.runner --out tests/ragas_report.json
 ```
 
-无 LLM Key 时使用启发式指标（Faithfulness / Answer Relevancy / Context Recall）。低于阈值只警告、不阻断。Golden 草稿：`apps/api/tests/golden/`（待业务确认后冻结）。
+无 LLM Key 时使用启发式指标（Faithfulness / Answer Relevancy / Context Recall）。低于阈值只警告、不阻断。Golden：`apps/api/tests/golden/extract_writeback.json`（评测已冻结；口径若与一线不符再改）。
 
-Langfuse：`.env` 填写 `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` 后走官方 SDK；留空则内存 Mock，CI 不红。
+Langfuse：`.env` 填写 `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` 后走官方 SDK；留空则内存 Mock。不要把 Key 提交进 git；CI 故意不配云账号。
+
+真 Ragas LLM：本机 `RAGAS_BACKEND=llm` 且已安装 ragas + Chat Key。GitHub 周评估默认 heuristic，可在 Actions 里 **Run workflow** 立刻跑一轮，产物为 `ragas_report` artifact。
 
 ### CI / 测试（P9）
 
@@ -78,8 +80,13 @@ make test-unit          # 不需要 Postgres
 make eval               # 周一 GHA 也会跑；低分只警告
 ```
 
-集成测需要本机或 CI 的 `montocrm_test`（pgvector）。发布镜像：打 `v*` tag 触发 [`.github/workflows/ghcr.yml`](.github/workflows/ghcr.yml)。
+本机 `git push` 若 HTTPS 被重置：
 
+```powershell
+powershell -File scripts/push.ps1
+```
+
+发布镜像：打 tag `v0.2.0` 后工作流 [ghcr.yml](.github/workflows/ghcr.yml) 推 `api` / `web`。集成测需要 pgvector（CI 已带 service）。
 
 ---
 

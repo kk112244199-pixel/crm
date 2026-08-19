@@ -63,7 +63,8 @@ montocrm/
 - 监听 `80`（301 → HTTPS）与 `443`（可用 `NGINX_HTTP_PORT` / `NGINX_HTTPS_PORT` 改映射）
 - 本机 **Apache httpd 占用 443** 时，`.env` 设 `NGINX_HTTPS_PORT=18443`，HTTP 301 会跳到 `https://host:18443`
 - 容器启动时若 volume `nginx_certs` 中没有 `fullchain.pem`，`docker/nginx/start.sh` 生成 **自签** 证书（仅内网/本机）
-- 公网：把 Let's Encrypt 的 `fullchain.pem` / `privkey.pem` 写入该 volume 后重启 nginx
+- 公网：`certbot certonly --standalone` 或 nginx plugin 签好后：
+  `CERT_DIR=/etc/letsencrypt/live/你的域名 ./scripts/load-le-certs.sh`
 - API 另有进程内限流与安全头；开发默认 `RATE_LIMIT_*_PER_MIN=120`，生产改为 5/10
 
 ---

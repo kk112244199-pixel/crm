@@ -48,3 +48,5 @@
 - [x] Ragas：启发式 runner 可跑；阈值警告不阻断（见 P6）
 - [x] 钉钉：测试消息可送达（见 P8 冒烟）；CI 用 Mock
 - [x] PR CI 绿；HTTPS + `/auth/token` 429
+
+本机 Windows：HTTPS 映射 `18443`（Apache 占 443）。公网证书、Langfuse Cloud、`RAGAS_BACKEND=llm` 需域名或 Key，不阻塞第二期编码收口。

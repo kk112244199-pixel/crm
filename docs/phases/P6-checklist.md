@@ -39,7 +39,7 @@
 
 ### Ragas / Golden
 
-- [x] 10 条 golden 草稿（`status: draft_pending_review`）
+- [x] 10 条 golden（`status: frozen`，评测用；一线抽查可再改口径）
 - [x] Faithfulness / Answer Relevancy / Context Recall
 - [x] `make eval` 可跑
 - [x] 启发式自检：Faithfulness 1.0，Relevancy 0.84（P7 后对照模型输出再刷）

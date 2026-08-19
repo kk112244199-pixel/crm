@@ -6,5 +6,5 @@
 - **事实字段**可为空；MEDDIC 角色必须有 `evidence` + `confidence`。
 - `champion` / `economic_buyer` 仅在有行为或预算拍板证据时填写，否则 `null`。
 - 相对日期以 **meeting_date** 为锚点（不要用评测当天）。
-- `status: frozen` — 业务已确认，作为 RAG / Agent 评测冻结集。
+- `status: frozen`：作为 RAG / Agent **评测冻结集**。一线销售抽查口径后若有异议，再改 JSON 并升 `version`。
 - 评估：`make eval`。
